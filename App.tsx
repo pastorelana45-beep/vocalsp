@@ -1,10 +1,3 @@
-
-// @google/genai Coding Guidelines followed:
-// 1. Used new GoogleGenAI({apiKey: process.env.API_KEY})
-// 2. Used veo-3.1-fast-generate-preview for video generation
-// 3. Implemented window.aistudio key selection check and handling
-// 4. Followed operation polling and download link generation with API key
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Header } from './components/Header.tsx';
 import { Visualizer } from './components/Visualizer.tsx';
@@ -145,20 +138,26 @@ const App: React.FC = () => {
       }
       setIsGeneratingVideo(true);
       setVideoGenerationStatus("Preparing studio scene...");
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+      // Correzione: Uso delle variabili d'ambiente di Vite
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "";
+      const ai = new GoogleGenAI(apiKey);
+      
       const inst = INSTRUMENTS.find(i => i.id === selectedInstrument);
-      let operation = await ai.models.generateVideos({
+      let operation = await (ai as any).models.generateVideos({
         model: 'veo-3.1-fast-generate-preview',
         prompt: `High-end cinematic close-up of a futuristic music studio. A singer's voice becomes glowing musical notes. ${inst?.name} instrument as a holographic interface. Cyberpunk, 8k.`,
         config: { numberOfVideos: 1, resolution: '720p', aspectRatio: '16:9' }
       });
+
       while (!operation.done) {
         await new Promise(resolve => setTimeout(resolve, 10000));
-        operation = await ai.operations.getVideosOperation({ operation: operation });
+        operation = await (ai as any).operations.getVideosOperation({ operation: operation });
       }
+
       const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
       if (downloadLink) {
-        const response = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
+        const response = await fetch(`${downloadLink}&key=${apiKey}`);
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -216,7 +215,6 @@ const App: React.FC = () => {
       <main className="max-w-7xl mx-auto px-8 py-10 space-y-10">
         <Visualizer analyser={audioEngineRef.current?.getAnalyser() || null} isActive={appState !== 'idle'} activeColor="purple" />
         
-        {/* CONTROL PANEL - ORA SOPRA GLI STRUMENTI */}
         <section className="glass p-8 rounded-[3rem] border-white/5 shadow-2xl">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
             
