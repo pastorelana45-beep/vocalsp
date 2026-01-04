@@ -13,7 +13,8 @@
     "react-dom": "^19.0.0",
     "lucide-react": "^0.475.0",
     "jszip": "^3.10.1",
-    "@google/generative-ai": "latest"
+    "@google/generative-ai": "latest",
+    "stripe": "^14.0.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
