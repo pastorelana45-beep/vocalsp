@@ -23,6 +23,9 @@ export class AudioEngine {
   private activeLiveNote: any = null;
   private octaveShift: number = 0;
   private sensitivity: number = 0.01;
+  private autotuneEnabled: boolean = false;
+  private selectedScale: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+  
   private onNoteUpdate: (note: number | null, name: string | null) => void;
 
   constructor(onNoteUpdate: (note: number | null, name: string | null) => void) {
@@ -31,6 +34,8 @@ export class AudioEngine {
 
   setOctaveShift(shift: number) { this.octaveShift = shift; }
   setSensitivity(val: number) { this.sensitivity = val; }
+  setAutotune(enabled: boolean) { this.autotuneEnabled = enabled; }
+  setScale(intervals: number[]) { this.selectedScale = intervals; }
 
   private async initAudio() {
     if (!this.audioCtx) {
@@ -80,7 +85,9 @@ export class AudioEngine {
     if (mode === 'recording') this.sequence = [];
     
     try {
-      this.micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.micStream = await navigator.mediaDevices.getUserMedia({ 
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } 
+      });
       this.source = this.audioCtx!.createMediaStreamSource(this.micStream);
       this.source.connect(this.analyser!);
       
@@ -135,7 +142,14 @@ export class AudioEngine {
     const volume = Math.sqrt(sum / buf.length);
 
     if (pitch > 0 && clarity > 0.85 && volume > this.sensitivity) {
-      let midi = Math.round(12 * Math.log2(pitch / 440) + 69) + (this.octaveShift * 12);
+      let rawMidi = Math.round(12 * Math.log2(pitch / 440) + 69) + (this.octaveShift * 12);
+      let midi = rawMidi;
+
+      // Logica Autotune: Snap to Scale
+      if (this.autotuneEnabled) {
+        midi = this.snapToScale(rawMidi);
+      }
+
       midi = Math.max(0, Math.min(127, midi));
 
       if (midi !== this.lastStableMidi) {
@@ -169,11 +183,31 @@ export class AudioEngine {
     if (this.isProcessing) requestAnimationFrame(this.process);
   }
 
+  private snapToScale(midi: number): number {
+    const noteInOctave = midi % 12;
+    const octave = Math.floor(midi / 12);
+    
+    let closestNote = this.selectedScale[0];
+    let minDiff = 13;
+
+    for (const interval of this.selectedScale) {
+      const diff = Math.abs(interval - noteInOctave);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestNote = interval;
+      }
+    }
+    
+    return (octave * 12) + closestNote;
+  }
+
   private triggerNote(midi: number) {
     if (this.instrument && this.audioCtx) {
-      const prev = this.activeLiveNote;
-      this.activeLiveNote = this.instrument.play(midi, this.audioCtx.currentTime, { gain: 0.8 });
-      if (prev) prev.stop(this.audioCtx.currentTime + 0.02);
+      if (this.mode === 'live') {
+        const prev = this.activeLiveNote;
+        this.activeLiveNote = this.instrument.play(midi, this.audioCtx.currentTime, { gain: 0.8 });
+        if (prev) prev.stop(this.audioCtx.currentTime + 0.02);
+      }
 
       if (this.mode === 'recording') {
         if (this.sequence.length > 0) {

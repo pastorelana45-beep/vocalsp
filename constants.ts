@@ -6,6 +6,14 @@ export interface ExtendedInstrument extends Instrument {
   midiProgram: number;
 }
 
+export const SCALES = [
+  { name: 'Cromatica (Libera)', intervals: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] },
+  { name: 'Maggiore (C)', intervals: [0, 2, 4, 5, 7, 9, 11] },
+  { name: 'Minore Nat. (Am)', intervals: [0, 2, 3, 5, 7, 8, 10] },
+  { name: 'Pentatonica Maj', intervals: [0, 2, 4, 7, 9] },
+  { name: 'Blues Scale', intervals: [0, 3, 5, 6, 7, 10] }
+];
+
 export const INSTRUMENTS: ExtendedInstrument[] = [
   // Pianos (0-7)
   { id: 'acoustic_grand_piano', name: 'Grand Piano', category: 'Piano', color: 'bg-blue-600', midiProgram: 0 },
