@@ -8,7 +8,8 @@ import { INSTRUMENTS } from './constants.ts';
 import { downloadBlob, exportMidi } from './services/midiExport.ts';
 import { ProLanding } from './components/ProLanding.tsx';
 import { licenseService } from './services/licenseService.ts';
-import { GoogleGenAI } from "@google/genai";
+// Pacchetto corretto
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { 
   Mic, Square, ChevronUp, ChevronDown, Loader2, Volume2, PlayCircle, Download, Settings, AlertCircle, Crown, Video
 } from 'lucide-react';
@@ -139,20 +140,21 @@ const App: React.FC = () => {
       setIsGeneratingVideo(true);
       setVideoGenerationStatus("Preparing studio scene...");
 
-      // Correzione: Uso delle variabili d'ambiente di Vite
+      // Caricamento API Key via Vite Env
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "";
-      const ai = new GoogleGenAI(apiKey);
+      const genAI = new GoogleGenerativeAI(apiKey);
       
       const inst = INSTRUMENTS.find(i => i.id === selectedInstrument);
-      let operation = await (ai as any).models.generateVideos({
-        model: 'veo-3.1-fast-generate-preview',
+      const model = genAI.getGenerativeModel({ model: "veo-3.1-fast-generate-preview" });
+
+      let operation = await (model as any).generateVideos({
         prompt: `High-end cinematic close-up of a futuristic music studio. A singer's voice becomes glowing musical notes. ${inst?.name} instrument as a holographic interface. Cyberpunk, 8k.`,
         config: { numberOfVideos: 1, resolution: '720p', aspectRatio: '16:9' }
       });
 
       while (!operation.done) {
         await new Promise(resolve => setTimeout(resolve, 10000));
-        operation = await (ai as any).operations.getVideosOperation({ operation: operation });
+        operation = await (genAI as any).operations.getVideosOperation({ operation: operation });
       }
 
       const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
@@ -303,4 +305,5 @@ const App: React.FC = () => {
     </div>
   );
 };
+
 export default App;
